@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xsi:schemaLocation="http://www.springframework.org/schema/websocket http://www.springframework.org/schema/websocket/spring-websocket-4.3.xsd
+		http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+	
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources/** by efficiently serving up static resources in the ${webappRoot}/resources directory -->
+	<resources mapping="/res/**" location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	
+	<websocket:handlers>
+	<websocket:mapping handler="chattingHandler" path="/chatting"/>
+	<websocket:sockjs></websocket:sockjs>
+	</websocket:handlers>
+<beans:bean id="chattingHandler" class="com.pms.main.ChatHandler"/>
+	
+	<!-- Multipart Resolver -->
+	<beans:bean id="myMultipartResolver" class="org.springframework.web.multipart.support.StandardServletMultipartResolver"></beans:bean>
+	<context:component-scan base-package="com.pms.main" />
+	<context:component-scan base-package="com.pms.services" />
+	<context:component-scan base-package="com.pms.utils" />
+	
+</beans:beans>
+
+<!-- Spring Component
+	@Component		개발자가 직접 작성한 Class를 Bean으로 등록하기 위한 Annotation이다.
+	@Controller		Spring의 Controller를 의미한다. Spring MVC에서 Controller클래스에 쓰인다.
+	@RestController Spring에서 Controller 중 View로 응답하지 않는, Controller를 의미한다.
+	@Service		Service Class에서 쓰인다. 비즈니스 로직을 수행하는 Class라는 것을 나타내는 용도이다.
+	@Repository		DAO class에서 쓰인다. DataBase에 접근하는 method를 가지고 있는 Class에서 쓰인다.
+	@Resource		@Autowired와 마찬가지로 Bean 객체를 주입해주는데 차이점은 Autowired는 타입으로, Resource는 이름으로 연결해준다.
+	@Bean			발자가 직접 제어가 불가능한 외부 라이브러리등을 Bean으로 만들려할 때 사용되는 Annotation이다.
+ -->
+ 
+ <!-- DI
+ 	@Autowired		속성(field), setter method, constructor(생성자)에서 사용하며 Type에 따라 알아서 Bean을 주입 해준다.
+ 	@Qualifier		@Autowired와 같이 쓰이며, 같은 타입의 Bean 객체가 있을 때 해당 아이디를 적어 원하는 Bean이 주입될 수 있도록 하는 Annotation이다.
+ 	@Resource		@Autowired와 마찬가지로 Bean 객체를 주입해주는데 차이점은 Autowired는 타입으로, Resource는 이름으로 연결해준다.
+ 	@Inject			@Autowired 어노테이션과 비슷한 역할을 한다.
+  -->
+  
+  <!-- Client Request
+  	@RequestMapping		요청 URL을 어떤 method가 처리할지 mapping해주는 Annotation이다.
+  	@PathVariable		method parameter 앞에 사용하면서 해당 URL에서 {특정값}을 변수로 받아 올 수 있다.
+  	@RequestParam		@PathVariable과 비슷하다. request의 parameter에서 가져오는 것이다. method의 파라미터에 사용된다.
+  	@ModelAttribute		View에서 전달해주는 parameter를 Class(VO/DTO)의 멤버 변수로 binding 해주는 Annotation이다.
+  	@PostMapping		@RequestMapping(Method=RequestMethod.POST)과 같다.
+  	@GetMapping			@RequestMapping(Method=RequestMethod.GET)과 같다.
+   -->

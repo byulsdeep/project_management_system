@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.pms.inter.MapperInter">
+	<resultMap id="getProjectInfoHoon" type="com.pms.beans.ProjectB">
+		<id column="PRO_CODE" property="projectCode" />
+		<result column="PRO_NAME" property="projectName" />
+		<result column="PRO_COMMENTS" property="projectComment" />
+		<result column="PRO_START" property="startDate" />
+		<result column="PRO_END" property="endDate" />
+		<result column="PRO_VISIBLE" property="isVisible" />
+		<collection property="projectMembers" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.ProMemB" select="getProjectMembersHoon"></collection>
+		<collection property="modules" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.MouB" select="getModuleList"></collection>
+		<collection property="jobs" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.JobB" select="getJobList"></collection>
+		<collection property="mojos" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.MoJoB" select="getMoJoList"></collection>				
+		<collection property="methods" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.MethodB" select="getMethodList"></collection>
+	</resultMap>
+	<resultMap id="getProjectDetailMap" type="com.pms.beans.ProjectB">
+		<id column="PRO_CODE" property="projectCode" />
+		<result column="PRO_NAME" property="projectName" />
+		<result column="PRO_COMMENTS" property="projectComment" />
+		<result column="PRO_START" property="startDate" />
+		<result column="PRO_END" property="endDate" />
+		<result column="PRO_VISIBLE" property="isVisible" />
+		<collection property="projectMemberss" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.ProMemB" select="getProjectMemberss"></collection>
+		<collection property="modules" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.MouB" select="getModuleList"></collection>
+		<collection property="jobs" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.JobB" select="getJobList"></collection>
+		<collection property="mojos" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.MoJoB" select="getMoJoList"></collection>				
+		<collection property="methods" javaType="java.util.ArrayList" column="projectCode=PRO_CODE" ofType="com.pms.beans.MethodB" select="getMethodList"></collection>
+	</resultMap>
+<!-- auth -->
+	<select id="isMemberr" parameterType="com.pms.beans.AuthB" resultType="string">
+		SELECT PMB_PASSWORD FROM PMB WHERE PMB_CODE = #{pmbCode} 
+	</select>
+	<select id="isAccess" parameterType="com.pms.beans.AuthB" resultType="string">
+		SELECT ASL_PUBLICIP || ':' || ASL_PRIVATEIP
+		FROM ASL
+		WHERE TO_CHAR(ASL_DATE, 'YYMMDD') = TO_CHAR(SYSDATE, 'YYMMDD') AND ASL_PMBCODE = #{pmbCode}
+		GROUP BY ASL_PMBCODE, ASL_PUBLICIP, ASL_PRIVATEIP
+		HAVING SUM(ASL_ACTION) = 1
+	</select>	
+	<insert id="insAsl" parameterType="com.pms.beans.AuthB">
+		INSERT INTO ASL(ASL_PMBCODE, ASL_DATE, ASL_PUBLICIP, ASL_PRIVATEIP, ASL_ACTION)
+		VALUES(#{pmbCode}, DEFAULT, #{publicIp}, #{privateIp}, #{action})
+	</insert>
+	<select id="getAccessInfo" parameterType="com.pms.beans.AuthB" resultType="com.pms.beans.AuthB">
+		SELECT * FROM ACCESSINFO WHERE PMBCODE = ${pmbCode}
+	</select>
+	
+<!-- signup -->
+	<select id="getMaxPmbCode" resultType="string">
+		SELECT NVL(TO_CHAR(TO_NUMBER(MAX(PMB_CODE)) +1), TO_CHAR(SYSDATE, 'YYYYMM')||'01') AS PMBCODE 
+		FROM PMB WHERE SUBSTR(PMB_CODE, 1,6) = TO_CHAR(SYSDATE, 'YYYYMM')	
+	</select>
+	<select id="getLevelList" resultType="com.pms.beans.AuthB">
+		SELECT MLV_CODE AS MLVCODE, MLV_NAME AS MLVNAME FROM MLV
+	</select>
+	<select id="getClassList" resultType="com.pms.beans.AuthB">
+		<![CDATA[
+		SELECT CLA_CODE AS CLACODE, CLA_NAME || '[' || CLA_NUM || ']' AS CLANAME FROM CLA
+		]]>
+	</select>	
+	<insert id="regMember" parameterType="com.pms.beans.AuthB">
+		INSERT INTO PMB(PMB_CODE, PMB_PASSWORD, PMB_NAME, PMB_MLVCODE, PMB_CLACODE, PMB_EMAIL) 
+		VALUES(#{pmbCode}, #{pmbPassword}, #{pmbName}, #{mlvCode}, #{claCode}, #{email})
+	</insert>	
+	
+<!-- project -->
+	<insert id="insProject" parameterType="com.pms.beans.ProjectB">
+		INSERT INTO PRO(PRO_CODE, PRO_NAME, PRO_COMMENTS, PRO_START, PRO_END, PRO_VISIBLE) 
+		VALUES(#{projectCode}, #{projectName}, #{projectComment}, TO_DATE(#{startDate}, 'YYYY-MM-DD'), TO_DATE(#{endDate}, 'YYYY-MM-DD'), #{isVisible})
+	</insert>	
+	<select id="getMemberList" parameterType="com.pms.beans.AuthB" resultType="com.pms.beans.AuthB">
+		SELECT * FROM MEMBERLIST
+	</select>	
+	<update id="insProjectMembers" parameterType="com.pms.beans.ProjectB">
+		<foreach item="pm" collection="projectMembers" separator=" " open="INSERT ALL" close="SELECT * FROM DUAL">
+		INTO PRM(PRM_PROCODE, PRM_PMBCODE, PRM_POSITION, PRM_ACCEPT)
+		VALUES(#{projectCode}, #{pm.pmbCode}, 'MB', default)
+		</foreach>
+	</update>
+	<insert id="insOneByOne" parameterType="com.pms.beans.ProMemB">
+		
+		INSERT INTO PRM(PRM_PROCODE, PRM_PMBCODE, PRM_POSITION, PRM_ACCEPT)
+		VALUES(#{projectCode}, #{pmbCode}, 'MB', default)
+	
+	</insert>
+	
+	<insert id="insSelf" parameterType="com.pms.beans.ProMemB">
+		INSERT INTO PRM(PRM_PROCODE, PRM_PMBCODE, PRM_POSITION, PRM_ACCEPT)
+		VALUES(#{projectCode}, #{pmbCode}, 'MG', 'AC')
+	</insert>	
+<!-- new shit -->
+	<insert id="insAul" parameterType="com.pms.beans.AulB">
+		INSERT INTO AUL(AUL_SPMBCODE, AUL_RPMBCODE, AUL_INVITEDATE, AUL_EXPIRE, AUL_AUTHRESULT, AUL_PROCODE)
+  		VALUES(#{sender},#{recipient},default,5,default, #{projectCode})
+	</insert>
+	<!--  <update id="updAul" parameterType="com.pms.beans.AulB">
+		 AUL SET AUL_SPMBCODE = #{sender}, AUL_RPMBCODE = #{recipient}, AUL_INVITEDATE, AUL_EXPIRE, AUL_AUTHRESULT)
+  		VALUES(,default,5,default)
+	</update>-->
+	<select id="isPrm" parameterType="com.pms.beans.AuthB" resultType="com.pms.beans.AulB">
+		SELECT * FROM RINVITEINFO WHERE RECIPIENT = #{pmbCode}
+	</select>	
+<!-- newer shit -->	
+	<select id="receivedInvitationInfo" parameterType="com.pms.beans.AuthB" resultType="com.pms.beans.AulB">
+		<![CDATA[
+		SELECT 	SENDER, SENDERNAME, RECIPIENT, TO_CHAR(INVITEDATE,'YYYYMMDDHH24MISS') AS INVITEDATE, 
+				TO_CHAR(EXPIREDATE, 'YYYYMMDDHH24MISS') AS EXPIREDATE, AUTHRESULT
+		FROM RINVITEINFO 
+		WHERE RECIPIENT = #{pmbCode} AND INVITEDATE >= (SYSDATE - 1) AND AUTHRESULT = 'NA'
+		]]>
+	</select>
+	<select id="sentInvitationInfo" parameterType="com.pms.beans.AuthB" resultType="com.pms.beans.AulB">
+	<![CDATA[
+		SELECT 	SENDER, RECIPIENT, RECIPIENTNAME, TO_CHAR(INVITEDATE,'YYYYMMDDHH24MISS') AS INVITEDATE, 
+				TO_CHAR(EXPIREDATE, 'YYYYMMDDHH24MISS') AS EXPIREDATE, AUTHRESULT, AUTHRESULTNAME
+		FROM SINVITEINFO
+		WHERE SENDER = #{pmbCode} AND INVITEDATE >= (SYSDATE - 2)
+		]]>
+	</select>
+<!-- MYSHIT -->
+	<select id="isInvited" parameterType="com.pms.beans.AuthB" resultType="string">
+		SELECT COUNT(*) FROM RINVITEINFO WHERE RECIPIENT = #{pmbCode}
+	</select>
+	<update id="updPrm" parameterType="com.pms.beans.ProMemB">
+		UPDATE PRM
+        SET PRM_ACCEPT= #{isAccept}
+        WHERE PRM_PMBCODE = #{pmbCode} AND PRM_PROCODE= #{projectCode}
+	</update>
+	<select id="getInviteDate" parameterType="com.pms.beans.AulB" resultType="string">
+		SELECT TO_CHAR(MAX(AUL_INVITEDATE), 'YYYYMMDDHH24MISS') FROM AUL 
+		WHERE AUL_SPMBCODE = #{sender} AND AUL_RPMBCODE = #{recipient} AND AUL_AUTHRESULT = 'NA'
+	</select>
+	<update id="updAul" parameterType="com.pms.beans.AulB">
+		UPDATE AUL 
+        SET AUL_AUTHRESULT = #{authResult}
+        WHERE AUL_INVITEDATE = TO_DATE(#{inviteDate}, 'YYYYMMDDHH24MISS') AND AUL_SPMBCODE = #{sender} AND AUL_RPMBCODE = #{recipient}
+        AND AUL_PROCODE = #{projectCode}
+	</update>
+	<select id="getProjectList" parameterType="com.pms.beans.AuthB" resultType="com.pms.beans.ProListB">
+		SELECT*FROM PROJECTLIST2 WHERE PMBCODE = #{pmbCode} AND ISACCEPT = 'AC' AND POSITION = 'MG'      
+	</select>
+	<select id="getFullProjectList" parameterType="com.pms.beans.AuthB" resultType="com.pms.beans.ProListB">
+		SELECT*FROM PROJECTLIST2 WHERE PMBCODE = #{pmbCode} AND POSITION = 'MG'      
+
+	</select>
+	<select id="getProjectMembers" parameterType="com.pms.beans.ProjectB" resultType="string">
+		<![CDATA[
+		SELECT COUNT(*) FROM PRM INNER JOIN PRO ON PRO_CODE = PRM_PROCODE AND PRM_ACCEPT = 'AC' WHERE PRO_CODE = #{projectCode}
+        ]]>
+	</select>
+	<select id="getProjectHoon" parameterType="com.pms.beans.AuthB" resultMap="getProjectInfoHoon">
+		SELECT * 
+		FROM PRO 
+		WHERE PRO_CODE IN(SELECT PRM_PROCODE FROM PRM WHERE PRM_PMBCODE = #{pmbCode})
+	</select>
+	<select id="getProjectDetail" parameterType="com.pms.beans.ProjectB" resultMap="getProjectDetailMap">
+		SELECT * 
+		FROM PRO 
+		WHERE PRO_CODE = #{projectCode}
+	</select>
+	<select id="getProjectMemberss" parameterType="java.util.HashMap" resultType="com.pms.beans.ProMemB">
+		SELECT PRM_PROCODE AS PROJECTCODE,
+		PRM_PMBCODE AS PMBCODE,
+		PMB_NAME AS PMBNAME,
+		PRM_POSITION AS POSITION,
+		PRM_ACCEPT AS ISACCEPT
+		FROM PRM INNER JOIN PMB ON PRM_PMBCODE = PMB_CODE
+		WHERE PRM_PROCODE = #{projectCode}
+	</select>
+	<select id="getModuleList" parameterType="java.util.HashMap" resultType="com.pms.beans.MouB">
+		SELECT MOU_PROCODE AS PROJECTCODE, MOU_CODE AS MODULECODE, MOU_NAME AS MODULENAME, MOU_COMMENTS AS MODULECOMMENT
+		FROM MOU WHERE MOU_PROCODE = #{projectCode}
+	</select>
+	<select id="getJobList" parameterType="java.util.HashMap" resultType="com.pms.beans.JobB">
+		SELECT JOS_PROCODE AS PROJECTCODE, 
+		JOS_CODE AS JOBCODE, 
+		JOS_NAME AS "JOBNAME", 
+		JOS_COMMENTS AS JOBCOMMENT 
+		FROM JOS WHERE JOS_PROCODE = #{projectCode}
+	</select>
+	<select id="getMoJoList" parameterType="java.util.HashMap" resultType="com.pms.beans.MoJoB">
+		SELECT MJ_PROCODE AS PROJECTCODE, 
+		MJ_MOUCODE AS MODULECODE,
+		MOU_NAME AS MODULENAME, 
+		MJ_JOSCODE AS JOBCODE, 
+		JOS_NAME AS JOBNAME,
+		MJ_PRMPMBCODE AS PMBCODE, 
+		PMB_NAME AS PMBNAME
+		FROM MJ INNER JOIN PMB ON MJ_PRMPMBCODE = PMB_CODE
+		INNER JOIN MOU ON MJ_MOUCODE = MOU_CODE AND MOU_PROCODE = MJ_PROCODE
+		INNER JOIN JOS ON MJ_JOSCODE = JOS_CODE AND JOS_PROCODE = MJ_PROCODE
+		WHERE MJ_PROCODE = #{projectCode}  
+	</select>
+	<select id="getMethodList" parameterType="java.util.HashMap" resultType="com.pms.beans.MethodB">
+		SELECT MET_MJPROCODE AS PROJECTCODE, 
+		MET_MJMOUCODE AS MODULECODE, 
+		MOU_NAME AS MODULENAME,
+		MET_MJJOSCODE AS JOBCODE,
+		JOS_NAME AS JOBNAME,
+		MET_CODE AS METHODCODE, 
+		MET_NAME AS METHODNAME, 
+		MET_MCCODE AS MCCODE,
+		MET_STATE AS METHODSTATE
+		FROM MET INNER JOIN MOU ON MET_MJMOUCODE = MOU_CODE AND MET_MJPROCODE = MOU_PROCODE
+		INNER JOIN JOS ON MET_MJJOSCODE = JOS_CODE AND JOS_PROCODE = MET_MJPROCODE
+		WHERE MET_MJPROCODE = #{projectCode}
+	</select>	
+	
+	<!-- upd del -->
+	<update id="updModule" parameterType="com.pms.beans.MouB">
+		UPDATE MOU SET MOU_NAME = #{moduleName}, MOU_COMMENTS = #{moduleComment}
+		WHERE MOU_PROCODE = #{projectCode} AND MOU_CODE = #{moduleCode} 
+	</update>
+	<update id="delModule" parameterType="com.pms.beans.MouB">
+		DELETE FROM MOU WHERE MOU_PROCODE = #{projectCode} AND MOU_CODE = #{moduleCode} 
+	</update>
+	<update id="insModule" parameterType="com.pms.beans.MouB">
+		INSERT INTO MOU(MOU_PROCODE, MOU_CODE, MOU_NAME, MOU_COMMENTS)
+		VALUES(#{projectCode}, #{moduleCode}, #{moduleName}, #{moduleComment})
+	</update>
+	
+	<update id="updJobs" parameterType="com.pms.beans.JobB">
+		UPDATE JOS SET JOS_NAME = #{jobName}, JOS_COMMENTS = #{jobComment}
+		WHERE JOS_PROCODE = #{projectCode} AND JOS_CODE = #{jobCode} 
+	</update>
+	<update id="delJobs" parameterType="com.pms.beans.JobB">
+		DELETE FROM JOS WHERE JOS_PROCODE = #{projectCode} AND JOS_CODE = #{jobCode} 
+	</update>
+	<update id="insJobs" parameterType="com.pms.beans.JobB">
+		INSERT INTO JOS(JOS_PROCODE, JOS_CODE, JOS_NAME, JOS_COMMENTS)
+		VALUES(#{projectCode}, #{jobCode}, #{jobName}, #{jobComment})
+	</update>
+	
+	<update id="updMoJo" parameterType="com.pms.beans.MoJoB">
+		UPDATE MJ SET MJ_PRMPMBCODE = #{pmbCode}
+		WHERE MJ_PROCODE = #{projectCode} AND MJ_MOUCODE = #{moduleCode} AND MJ_JOSCODE = #{jobCode}
+	</update>
+	<update id="delMoJo" parameterType="com.pms.beans.MoJoB">
+		DELETE FROM MJ WHERE MJ_PROCODE = #{projectCode} AND MJ_MOUCODE = #{moduleCode} AND MJ_JOSCODE = #{jobCode}
+	</update>
+	<update id="insMoJo" parameterType="com.pms.beans.MoJoB">
+		INSERT INTO MJ(MJ_PROCODE, MJ_MOUCODE, MJ_JOSCODE, MJ_PRMPMBCODE)
+		VALUES(#{projectCode}, #{moduleCode}, #{jobCode}, #{pmbCode})
+	</update>
+	
+	<update id="updMethods" parameterType="com.pms.beans.MethodB">
+		UPDATE MET SET MET_NAME = #{methodName}, MET_MCCODE = #{mcCode}
+		WHERE MET_MJPROCODE = #{projectCode} AND MET_CODE = #{methodCode}
+	</update>
+	<update id="delMethods" parameterType="com.pms.beans.MethodB">
+		DELETE FROM MET WHERE MET_MJPROCODE = #{projectCode} AND MET_CODE = #{methodCode}
+	</update>
+	<update id="insMethods" parameterType="com.pms.beans.MethodB">
+		INSERT INTO MET(MET_MJPROCODE, MET_MJMOUCODE, MET_MJJOSCODE, MET_CODE, MET_NAME, MET_MCCODE)
+		VALUES(#{projectCode}, #{moduleCode}, #{jobCode}, #{methodCode}, #{methodName}, #{mcCode})
+	</update>
+	<!-- upd del -->
+	<select id="getProjectMembersHoon" resultType="com.pms.beans.ProMemB">
+				SELECT 	PRM_PMBCODE AS PMBCODE, 
+				PRM_POSITION AS POSITION, 
+				PRM_ACCEPT AS ISACCEPT,
+                PMBNAME,
+                EMAIL,
+                MLVCODE,
+                MLVNAME,
+                CLACODE,
+                CLANAME
+		FROM PRM INNER JOIN MEMBERLIST ON PRM_PMBCODE = PMBCODE
+		WHERE PRM_PROCODE = #{projectCode}
+	</select>
+	<select id="getProjectMembers2" parameterType="com.pms.beans.ProjectB" resultMap="getProjectInfoHoon">
+		SELECT * 
+		FROM PRO 
+		WHERE PRO_CODE = #{projectCode}
+	</select>
+	<select id="getProjectMembers3" parameterType="com.pms.beans.ProMemB" resultType="com.pms.beans.ProMemB">
+		SELECT PRM_PMBCODE AS PMBCODE, PRM_ACCEPT AS ISACCEPT FROM PRM WHERE PRM_PROCODE = #{projectCode}
+	</select>
+		<select id="getMethodsOnMC" parameterType="com.pms.beans.MethodB" resultType="com.pms.beans.MethodB">
+        SELECT MET_MJPROCODE AS PROJECTCODE, 
+		MET_MJMOUCODE AS MODULECODE, 
+		MOU_NAME AS MODULENAME,
+		MET_MJJOSCODE AS JOBCODE,
+		JOS_NAME AS JOBNAME,
+		MET_CODE AS METHODCODE, 
+		MET_NAME AS METHODNAME, 
+		MET_MCCODE AS MCCODE,
+		MET_STATE AS METHODSTATE
+		FROM MET INNER JOIN MOU ON MET_MJMOUCODE = MOU_CODE AND MET_MJPROCODE = MOU_PROCODE
+		INNER JOIN JOS ON MET_MJJOSCODE = JOS_CODE AND JOS_PROCODE = MET_MJPROCODE
+		WHERE MET_MJPROCODE = #{projectCode}
+		AND MET_MCCODE = #{mcCode}
+	</select>
+	<select id="getMethodsOnMJMC" parameterType="com.pms.beans.MethodB" resultType="com.pms.beans.MethodB">
+        SELECT MET_MJPROCODE AS PROJECTCODE, 
+		MET_MJMOUCODE AS MODULECODE, 
+		MOU_NAME AS MODULENAME,
+		MET_MJJOSCODE AS JOBCODE,
+		JOS_NAME AS JOBNAME,
+		MET_CODE AS METHODCODE, 
+		MET_NAME AS METHODNAME, 
+		MET_MCCODE AS MCCODE,
+		MET_STATE AS METHODSTATE
+		FROM MET INNER JOIN MOU ON MET_MJMOUCODE = MOU_CODE AND MET_MJPROCODE = MOU_PROCODE
+		INNER JOIN JOS ON MET_MJJOSCODE = JOS_CODE AND JOS_PROCODE = MET_MJPROCODE
+		WHERE MET_MJPROCODE = #{projectCode}
+		AND MET_MJMOUCODE = #{moduleCode} 
+		AND MET_MJJOSCODE = #{jobCode}
+		AND MET_MCCODE = #{mcCode}
+	</select>
+	<select id="getMethodsOnMJ" parameterType="com.pms.beans.MethodB" resultType="com.pms.beans.MethodB">
+        SELECT MET_MJPROCODE AS PROJECTCODE, 
+		MET_MJMOUCODE AS MODULECODE, 
+		MOU_NAME AS MODULENAME,
+		MET_MJJOSCODE AS JOBCODE,
+		JOS_NAME AS JOBNAME,
+		MET_CODE AS METHODCODE, 
+		MET_NAME AS METHODNAME, 
+		MET_MCCODE AS MCCODE,
+		MET_STATE AS METHODSTATE
+		FROM MET INNER JOIN MOU ON MET_MJMOUCODE = MOU_CODE AND MET_MJPROCODE = MOU_PROCODE
+		INNER JOIN JOS ON MET_MJJOSCODE = JOS_CODE AND JOS_PROCODE = MET_MJPROCODE
+		WHERE MET_MJPROCODE = #{projectCode}
+		AND MET_MJMOUCODE = #{moduleCode} 
+		AND MET_MJJOSCODE = #{jobCode}
+	</select>
+	<update id="BF" parameterType="com.pms.beans.MethodB">		
+		UPDATE MET SET MET_STATE = 'BF'
+		WHERE MET_MJPROCODE = #{projectCode} AND MET_MJMOUCODE = #{moduleCode} AND MET_MJJOSCODE = #{jobCode}
+		AND MET_CODE = #{methodCode}	
+	</update>	
+	<update id="IN" parameterType="com.pms.beans.MethodB">		
+		UPDATE MET SET MET_STATE = 'IN'
+		WHERE MET_MJPROCODE = #{projectCode} AND MET_MJMOUCODE = #{moduleCode} AND MET_MJJOSCODE = #{jobCode}
+		AND MET_CODE = #{methodCode}	
+	</update>	
+	<update id="CP" parameterType="com.pms.beans.MethodB">		
+		UPDATE MET SET MET_STATE = 'CP'
+		WHERE MET_MJPROCODE = #{projectCode} AND MET_MJMOUCODE = #{moduleCode} AND MET_MJJOSCODE = #{jobCode}
+		AND MET_CODE = #{methodCode}	
+	</update>			
+</mapper>
+	<!--  <update id="insProjectMembers" parameterType="com.pms.beans.ProjectB">
+		<foreach item="pm" collection="projectMembers" separator=" " open="INSERT ALL" close="SELECT * FROM DUAL">
+		INTO PRM(PRM_PROCODE, PRM_PMBCODE, PRM_POSITION, PRM_ACCEPT)
+		VALUES(#{projectCode}, #{pm.pmbCode}, 'MB', default)
+		</foreach>
+	</update>-->
+	
